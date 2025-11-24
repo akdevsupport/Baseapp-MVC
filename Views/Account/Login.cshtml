@@ -1,0 +1,17 @@
+﻿@model Baseapp.Models.LoginModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Login</h2>
+
+<form method="post">
+    <input type="text" name="LoginID" placeholder="Username" class="form-control" />
+    <input type="password" name="Password" placeholder="Password" class="form-control mt-2" />
+    <button type="submit" class="btn btn-primary mt-3">Login</button>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <p style="color:red" class="mt-2">@Model.Message</p>
+    }
+</form>

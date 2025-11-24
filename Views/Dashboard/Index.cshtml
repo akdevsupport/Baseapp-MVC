@@ -1,0 +1,16 @@
+﻿@model Baseapp.Models.DashboardModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Dashboard</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="ExcelFile" class="form-control" />
+    <button type="submit" class="btn btn-success mt-3">Upload</button>
+</form>
+
+@if (Model.ExcelPath != null)
+{
+    <p class="mt-2">Uploaded: @Model.ExcelPath</p>
+}
