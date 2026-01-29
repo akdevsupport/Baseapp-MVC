@@ -1,6 +1,4 @@
 ﻿using Baseapp.Models;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,13 +20,41 @@ using DocumentFormat.OpenXml.EMMA;
 using System.Diagnostics;
 using System.ComponentModel;
 using OfficeOpenXml;
+using NPOI.OpenXml4Net.OPC.Internal;
+using Baseapp.Helper;
+using System.Net.Sockets;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace Baseapp.Controllers
 {
     public class DashboardController : BaseController
     {
+        //   private static ConnectedClient _client;
+        //readonly string CR = "\r";
+        readonly char CR = (char)13;
+
+        private ConnectedClient _client => AccountController.TcpClient;
+        public DashboardController()
+        {
+            if (!PrinterManager.Current.Connected)
+            {
+                TryReconnect();
+            }
+            GetPrinterStatus();
+            DoGetPrinterJob();
+        }
         public ActionResult Index()
         {
+            GetPrinterStatus();
+            ViewBag.PrinterStatus = PrinterManager.Current.PrinterStatus;
+            ViewBag.PrintCount = PrinterManager.Current.PrintCount;
+
+            ViewBag.JobList = PrinterManager.Current.JobList != null
+                ? new SelectList(
+                    PrinterManager.Current.JobList,
+                    "Value",
+                    "Label"
+                  ) : new SelectList(new List<string>());
             return View(new DashboardModel());
         }
 
@@ -58,10 +84,17 @@ namespace Baseapp.Controllers
                 else
                     model.Data = null;
             }
-
             return View(model);
         }
 
+        public ActionResult PrinterStatus()
+        {
+            return Json(new
+            {
+                status = PrinterManager.Current.PrinterStatus,
+                count = PrinterManager.Current.PrintCount
+            }, JsonRequestBehavior.AllowGet);
+        }
         private DataTable ReadCSV(string filePath)
         {
             DataTable dt = new DataTable();
@@ -83,14 +116,13 @@ namespace Baseapp.Controllers
             }
             return dt;
         }
-
         private DataTable ReadExcel(string filePath)
         {
             DataTable dt = new DataTable();
 
             using (var workbook = new ClosedXML.Excel.XLWorkbook(filePath))
             {
-                var ws = workbook.Worksheet(1); 
+                var ws = workbook.Worksheet(1);
 
                 bool firstRow = true;
 
@@ -111,6 +143,90 @@ namespace Baseapp.Controllers
                 }
             }
             return dt;
+        }
+        private static bool _connecting;
+        private static void TryReconnect()
+        {
+            _connecting = true;
+
+            new Thread(() =>
+            {
+                int attempts = 0;
+                int maxAttempts = 5;
+
+                while (attempts < maxAttempts)
+                {
+                    try
+                    {
+                        var settings = PrinterSettingsStore.Load();
+                        bool connected = AccountController.TcpClient
+                        .Connect(settings.IP, settings.Port);
+
+                        if (AccountController.TcpClient.Connected)
+                            break;
+                    }
+                    catch
+                    {
+                        attempts++;
+                        Thread.Sleep(2000);
+                    }
+                }
+                _connecting = false;
+            })
+            { IsBackground = true }.Start();
+        }
+        public void GetPrinterStatus()
+        {
+            try
+            {
+                if (PrinterManager.Current.Connected)
+                {
+                    PrinterManager.Current.Send("GST" + CR);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error on the connection to the Printer{ex}");
+            }
+        }
+        public void DoGetPrinterJob()
+        {
+            try
+            {
+                if (PrinterManager.Current.Connected)
+                {
+                    PrinterManager.Current.Send("GJL" + CR);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error on the connection to the Printer{ex}");
+            }
+        }
+        public ActionResult DoPrinterOnline()
+        {
+            string command = "SST|3|" + CR;
+            if (PrinterManager.Current.Connected)
+            {
+               PrinterManager.Current.Send(command);
+            }
+            Thread.Sleep(500);
+            GetPrinterStatus();
+
+
+            return View("Index", new DashboardModel());
+        }
+        public ActionResult DoPrinterOffline()
+        {
+            string command = "SST|4|" + CR;
+            if (PrinterManager.Current.Connected)
+            {
+                PrinterManager.Current.Send(command);
+            }
+            Thread.Sleep(500);
+            GetPrinterStatus();
+
+            return View("Index", new DashboardModel());
         }
     }
 }

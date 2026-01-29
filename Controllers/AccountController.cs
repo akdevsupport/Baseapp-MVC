@@ -1,4 +1,5 @@
-﻿using Baseapp.Models;
+﻿using Baseapp.Helper;
+using Baseapp.Models;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -11,6 +12,8 @@ namespace Baseapp.Controllers
 {
     public class AccountController : BaseController
     {
+        public static ConnectedClient TcpClient = new ConnectedClient();
+
         public ActionResult Login()
         {
             return View(new LoginModel());
@@ -31,6 +34,35 @@ namespace Baseapp.Controllers
                     user = new Models.User();
                     user.LoginID = parts[0];
                     user.Role = parts[2];
+
+                    // Connect to saved TCP settings
+                    var settings = PrinterSettingsStore.Load();
+                    //PrinterService.Initialize(settings.IP, settings.Port);
+                    // bool connected = TcpClient.Connect(settings.IP, settings.Port);
+                    if (!PrinterManager.Current.Connected)
+                    {
+                        bool connected = PrinterManager.Current.Connect(settings.IP, settings.Port);
+                        if (connected)
+                            TempData["msg"] = "TCP Connected Successfully!";
+                        else
+                            TempData["msg"] = "TCP Connection Failed!";
+                    }
+
+
+
+                    //if (!string.IsNullOrEmpty(SettingsController.SavedSettings.IP))
+                    //{
+                    //    bool connected = TcpClient.Connect(
+                    //        SettingsController.SavedSettings.IP,
+                    //        SettingsController.SavedSettings.Port
+                    //    );
+
+                    //    if (connected)
+                    //        TempData["msg"] = "TCP Connected Successfully!";
+                    //    else
+                    //        TempData["msg"] = "TCP Connection Failed!";
+                    //}
+
                     break;
                 }
             }

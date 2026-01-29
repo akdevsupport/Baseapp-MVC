@@ -3,18 +3,64 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<script>
+    setInterval(() => {
+        fetch('/Dashboard/PrinterStatus')
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('printerStatus').innerText = d.status;
+            });
+    }, 2000);
+</script>
+
+
 <h2>Dashboard</h2>
+
+<div id="PrintCount"
+     style="background:Green;
+            color:white;
+            padding:8px 15px;
+            font-weight:bold;
+            position:absolute;
+            right:80px;
+            top:10px;">
+    @ViewBag.PrintCount
+</div>
+
+<div id="printerStatus"
+     style="background:black;
+            color:white;
+            padding:8px 15px;
+            font-weight:bold;
+            position:absolute;
+            right:10px;
+            top:10px;">
+    @ViewBag.PrinterStatus
+</div>
+
 
 <form method="post" enctype="multipart/form-data">
     <input type="file" name="ExcelFile" class="form-control" />
-    <button type="submit" class="btn btn-success mt-3">Upload</button>
+    <button type="submit" class="btn btn-info mt-3">Upload</button>
 </form>
 
 @if (Model.ExcelPath != null)
 {
     <p class="mt-2">Uploaded: @Model.ExcelPath</p>
+
 }
 
+@*@Html.Label("Template")
+    @Html.DropDownList("JobList",ViewBag.JobList as SelectList,"Select",new { @class = "form-select" })*@
+
+
+<a href="/Dashboard/DoPrinterOnline" class="btn btn-success">Online</a>
+<a href="/Dashboard/DoPrinterOffline" class="btn btn-danger">Offline</a>
+
+@if (ViewBag.Response != null)
+{
+    <p>Response: @ViewBag.Response</p>
+}
 @if (Model.Data != null && Model.Data.Rows.Count > 0)
 {
     <table class="table table-bordered table-striped mt-3">
